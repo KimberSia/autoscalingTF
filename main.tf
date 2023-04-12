@@ -1,3 +1,5 @@
+
+
 #create a security group that allows to traffic to ssh/httpd/http
 resource "aws_security_group" "wk21-secgrp" {
   name_prefix = "wk21-secgrp"
@@ -36,36 +38,25 @@ resource "aws_security_group" "wk21-secgrp" {
     Name = "week21_security_group"
   }
 }
-#create launch template
-resource "aws_launch_template" "wk21-launchtemplate" {
-  name                                 = "wk21-launchtemplate"
-  instance_type                        = "t2.micro"
-  image_id                             = var.AMI
-  key_name                             = var.keyname
-  vpc_security_group_ids               = [aws_security_group.wk21-secgrp.id]
-  user_data                            = filebase64("${path.module}/apache.sh")
-  instance_initiated_shutdown_behavior = "terminate"
 
-  monitoring {
-    enabled = true
-  }
-
-  network_interfaces {
-    associate_public_ip_address = true
-    security_groups             = [aws_security_group.wk21-secgrp.id]
-
+resource "aws_autoscaling_group" "wk21asg" {
+  name_prefix        = "wk21asg"
+  max_size           = 5
+  min_size           = 2
+  desired_capacity   = 2
+  availability_zones = var.availability_zones
+  launch_template {
+    id = aws_launch_template.wk21-lt-1.id
   }
 }
-#create auto scaling group 
-
-resource "aws_autoscaling_group" "week21_asg" {
-  desired_capacity    = 2
-  max_size            = 5
-  min_size            = 2
-  vpc_zone_identifier = [var.pubsub1-us-east-lb, var.pubsub2-us-east-la]
 
 
-  launch_template {
-    id = aws_launch_template.wk21-launchtemplate.id
-  }
+#create launch template
+resource "aws_launch_template" "wk21-lt-1" {
+  name                   = "wk21-launchtemplate"
+  instance_type          = "t2.micro"
+  image_id               = var.AMI
+  key_name               = var.keyname
+  vpc_security_group_ids = [aws_security_group.wk21-secgrp.id]
+  user_data              = filebase64("${path.root}/apache.sh")
 }
